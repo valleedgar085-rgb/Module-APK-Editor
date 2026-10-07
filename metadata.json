@@ -1,0 +1,6 @@
+{
+  "name": "APK Easy Edit",
+  "description": "An application to easily edit APK files.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
