@@ -3,24 +3,51 @@ package com.example.ui
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.*
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.ui.components.*
+import com.example.ui.components.AddActivityDialog
+import com.example.ui.components.AddPermissionDialog
+import com.example.ui.components.ApkInspectorDisplay
+import com.example.ui.components.ApkProcessingDialog
+import com.example.ui.components.DiffViewerScreen
+import com.example.ui.components.ImportXmlDialog
+import com.example.ui.components.ManifestFormScreen
+import com.example.ui.components.PresetsScreen
+import com.example.ui.components.SavePresetDialog
+import com.example.ui.components.WorkbenchActionButton
+import com.example.ui.components.WorkbenchBottomNavigation
+import com.example.ui.components.WorkbenchScreenFrame
+import com.example.ui.components.WorkbenchStatusBanner
+import com.example.ui.components.XmlPreviewScreen
+import com.example.ui.theme.WorkbenchCyan
+import com.example.ui.theme.WorkbenchError
+import com.example.ui.theme.WorkbenchLime
+import com.example.ui.theme.WorkbenchWarning
 import com.example.viewmodel.ManifestViewModel
 import com.example.viewmodel.ScreenTab
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
     viewModel: ManifestViewModel,
@@ -30,7 +57,6 @@ fun MainScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val formScrollState = rememberScrollState()
 
-    // File picker UI component using ActivityResultContracts.GetContent
     val apkFilePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
@@ -46,146 +72,95 @@ fun MainScreen(
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text(
-                            text = "APK Easy Edit",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = "AndroidManifest.xml Editor & Inspector",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                },
-                actions = {
-                    // Open .apk file picker button in TopAppBar
-                    IconButton(
-                        onClick = { apkFilePickerLauncher.launch("*/*") },
-                        modifier = Modifier.testTag("action_pick_apk_file")
-                    ) {
-                        Icon(Icons.Default.FolderZip, contentDescription = "Pick .apk file")
-                    }
-
-                    // Import XML action
-                    IconButton(
-                        onClick = { viewModel.setShowImportDialog(true) },
-                        modifier = Modifier.testTag("action_import_xml")
-                    ) {
-                        Icon(Icons.Default.FileOpen, contentDescription = "Import XML")
-                    }
-
-                    // Reset to defaults
-                    IconButton(
-                        onClick = { viewModel.setShowResetConfirmDialog(true) },
-                        modifier = Modifier.testTag("action_reset_default")
-                    ) {
-                        Icon(Icons.Default.RestartAlt, contentDescription = "Reset to Defaults")
-                    }
-
-                    // Save / Commit action
-                    FilledTonalButton(
-                        onClick = { viewModel.saveChanges() },
-                        enabled = uiState.hasUnsavedChanges,
-                        modifier = Modifier
-                            .padding(end = 8.dp)
-                            .testTag("action_save_manifest")
-                    ) {
-                        Icon(Icons.Default.Save, contentDescription = "Save Manifest")
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(if (uiState.hasUnsavedChanges) "Save*" else "Saved")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                )
-            )
-        },
         bottomBar = {
-            NavigationBar(modifier = Modifier.testTag("bottom_navigation")) {
-                NavigationBarItem(
-                    selected = uiState.currentTab == ScreenTab.Form,
-                    onClick = { viewModel.setTab(ScreenTab.Form) },
-                    icon = { Icon(Icons.Default.EditNote, contentDescription = "Form") },
-                    label = { Text("Form") },
-                    modifier = Modifier.testTag("nav_item_form")
-                )
-                NavigationBarItem(
-                    selected = uiState.currentTab == ScreenTab.Inspector,
-                    onClick = { viewModel.setTab(ScreenTab.Inspector) },
-                    icon = { Icon(Icons.Default.Android, contentDescription = "APK Inspector") },
-                    label = { Text("APK Info") },
-                    modifier = Modifier.testTag("nav_item_inspector")
-                )
-                NavigationBarItem(
-                    selected = uiState.currentTab == ScreenTab.XmlPreview,
-                    onClick = { viewModel.setTab(ScreenTab.XmlPreview) },
-                    icon = { Icon(Icons.Default.Code, contentDescription = "XML Preview") },
-                    label = { Text("XML") },
-                    modifier = Modifier.testTag("nav_item_xml")
-                )
-                NavigationBarItem(
-                    selected = uiState.currentTab == ScreenTab.Diff,
-                    onClick = { viewModel.setTab(ScreenTab.Diff) },
-                    icon = { Icon(Icons.Default.Difference, contentDescription = "Diff Viewer") },
-                    label = { Text("Diff") },
-                    modifier = Modifier.testTag("nav_item_diff")
-                )
-                NavigationBarItem(
-                    selected = uiState.currentTab == ScreenTab.Presets,
-                    onClick = { viewModel.setTab(ScreenTab.Presets) },
-                    icon = { Icon(Icons.Default.Bookmark, contentDescription = "Presets") },
-                    label = { Text("Presets") },
-                    modifier = Modifier.testTag("nav_item_presets")
-                )
-            }
-        },
-        floatingActionButton = {
-            if (uiState.currentTab == ScreenTab.Form && uiState.hasUnsavedChanges) {
-                ExtendedFloatingActionButton(
-                    onClick = { viewModel.saveChanges() },
-                    icon = { Icon(Icons.Default.Check, contentDescription = "Save") },
-                    text = { Text("Save Changes") },
-                    modifier = Modifier.testTag("fab_save_changes")
-                )
-            } else if (uiState.currentTab == ScreenTab.Inspector) {
-                ExtendedFloatingActionButton(
-                    onClick = { apkFilePickerLauncher.launch("*/*") },
-                    icon = { Icon(Icons.Default.FolderZip, contentDescription = "Select APK") },
-                    text = { Text("Select APK") },
-                    modifier = Modifier.testTag("fab_select_apk")
-                )
-            }
+            WorkbenchBottomNavigation(
+                currentTab = uiState.currentTab,
+                onTabSelected = viewModel::setTab
+            )
         },
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
     ) { innerPadding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-        ) {
-            when (uiState.currentTab) {
-                ScreenTab.Form -> {
+        when (uiState.currentTab) {
+            ScreenTab.Form -> {
+                val statusColor = when {
+                    uiState.validation.errors.isNotEmpty() -> WorkbenchError
+                    uiState.validation.warnings.isNotEmpty() -> WorkbenchWarning
+                    else -> WorkbenchLime
+                }
+                val statusLabel = when {
+                    uiState.validation.errors.isNotEmpty() -> "ERROR"
+                    uiState.validation.warnings.isNotEmpty() -> "REVIEW"
+                    else -> "VALID"
+                }
+                WorkbenchScreenFrame(
+                    eyebrow = "APK / EDITOR",
+                    title = "Manifest Editor",
+                    statusLabel = statusLabel,
+                    statusColor = statusColor,
+                    modifier = Modifier.padding(innerPadding)
+                ) {
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
                             .verticalScroll(formScrollState)
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        ValidationBanner(
-                            validation = uiState.validation,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(
+                                space = 8.dp,
+                                alignment = Alignment.End
+                            )
+                        ) {
+                            WorkbenchActionButton(
+                                label = "IMPORT XML",
+                                onClick = { viewModel.setShowImportDialog(true) },
+                                primary = false,
+                                testTag = "action_import_xml"
+                            )
+                            WorkbenchActionButton(
+                                label = if (uiState.hasUnsavedChanges) "SAVE CHANGES" else "SAVED",
+                                onClick = viewModel::saveChanges,
+                                primary = true,
+                                enabled = uiState.hasUnsavedChanges,
+                                testTag = "action_save_manifest"
+                            )
+                        }
+
+                        WorkbenchStatusBanner(
+                            title = when {
+                                uiState.validation.errors.isNotEmpty() -> "Manifest has blocking errors"
+                                uiState.validation.warnings.isNotEmpty() -> "Manifest needs review"
+                                else -> "Manifest ready to build"
+                            },
+                            detail = when {
+                                uiState.validation.errors.isNotEmpty() ->
+                                    uiState.validation.errors.size.toString() + " error(s) · " +
+                                        uiState.validation.warnings.size.toString() + " warning(s)"
+                                uiState.validation.warnings.isNotEmpty() ->
+                                    uiState.validation.warnings.size.toString() + " best-practice warning(s)"
+                                else -> "All required manifest checks are passing"
+                            },
+                            color = statusColor
                         )
+
                         ManifestFormScreen(
                             manifest = uiState.manifest,
                             viewModel = viewModel
                         )
                     }
                 }
-                ScreenTab.Inspector -> {
+            }
+
+            ScreenTab.Inspector -> {
+                WorkbenchScreenFrame(
+                    eyebrow = "APK / INSPECT",
+                    title = "APK Inspector",
+                    statusLabel = if (uiState.loadedApkDetails != null) "LOADED" else "READY",
+                    statusColor = WorkbenchCyan,
+                    modifier = Modifier.padding(innerPadding)
+                ) {
                     ApkInspectorDisplay(
                         apkDetails = uiState.loadedApkDetails,
                         isLoading = uiState.isAnalyzingApk,
@@ -195,19 +170,50 @@ fun MainScreen(
                         viewModel = viewModel
                     )
                 }
-                ScreenTab.XmlPreview -> {
+            }
+
+            ScreenTab.XmlPreview -> {
+                WorkbenchScreenFrame(
+                    eyebrow = "APK / REVIEW",
+                    title = "XML Preview",
+                    statusLabel = "LIVE",
+                    statusColor = WorkbenchCyan,
+                    modifier = Modifier.padding(innerPadding)
+                ) {
                     XmlPreviewScreen(
                         xmlContent = uiState.generatedXmlPreview,
                         viewModel = viewModel
                     )
                 }
-                ScreenTab.Diff -> {
+            }
+
+            ScreenTab.Diff -> {
+                WorkbenchScreenFrame(
+                    eyebrow = "APK / REVIEW",
+                    title = "Review Changes",
+                    statusLabel = if (uiState.hasUnsavedChanges) "CHANGED" else "CLEAN",
+                    statusColor = if (uiState.hasUnsavedChanges) WorkbenchWarning else WorkbenchLime,
+                    modifier = Modifier.padding(innerPadding)
+                ) {
                     DiffViewerScreen(
                         current = uiState.manifest,
-                        original = uiState.originalManifest
+                        original = uiState.originalManifest,
+                        validation = uiState.validation,
+                        onShowXml = { viewModel.setTab(ScreenTab.XmlPreview) },
+                        onDiscard = viewModel::discardChanges,
+                        onSave = viewModel::saveChanges
                     )
                 }
-                ScreenTab.Presets -> {
+            }
+
+            ScreenTab.Presets -> {
+                WorkbenchScreenFrame(
+                    eyebrow = "APK / PRESETS",
+                    title = "Manifest Presets",
+                    statusLabel = uiState.presets.size.toString() + " SAVED",
+                    statusColor = WorkbenchCyan,
+                    modifier = Modifier.padding(innerPadding)
+                ) {
                     PresetsScreen(
                         presets = uiState.presets,
                         history = uiState.history,
@@ -218,14 +224,10 @@ fun MainScreen(
         }
     }
 
-    // Modal dialog with circular progress indicator if an APK is processing in the background
     if (uiState.isAnalyzingApk) {
-        ApkProcessingDialog(
-            progress = uiState.processingProgress
-        )
+        ApkProcessingDialog(progress = uiState.processingProgress)
     }
 
-    // Dialogs
     if (uiState.showAddPermissionDialog) {
         AddPermissionDialog(
             onDismiss = { viewModel.setShowAddPermissionDialog(false) },
@@ -275,7 +277,7 @@ fun MainScreen(
                         viewModel.resetToDefaults()
                         viewModel.setShowResetConfirmDialog(false)
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                    colors = ButtonDefaults.buttonColors(containerColor = WorkbenchError)
                 ) {
                     Text("Reset")
                 }
